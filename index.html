@@ -37,10 +37,7 @@
       max-width: 1120px;
       margin: 0 auto;
       padding: 12px 18px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
+      display: block;
     }
     h1 {
       margin: 0;
@@ -395,7 +392,6 @@
   <header>
     <div class="bar">
       <h1>SciScope Human Evaluation</h1>
-      <select id="annotatorSelect" aria-label="Annotator"></select>
     </div>
   </header>
   <main>
@@ -425,7 +421,6 @@
   <script src="data.js"></script>
   <script>
     const DATA = window.SCISCOPE_EVAL_DATA || {};
-    const annotatorSelect = document.getElementById("annotatorSelect");
     const itemView = document.getElementById("itemView");
     const itemList = document.getElementById("itemList");
     const summary = document.getElementById("summary");
@@ -586,7 +581,7 @@
     function renderItem() {
       const items = getItems();
       if (!items.length) {
-        itemView.innerHTML = "<h2>No items</h2><p class='warn'>Please select an annotator.</p>";
+        itemView.innerHTML = "<h2>No items</h2><p class='warn'>Invalid or missing annotator id. Please use the personal link assigned to you.</p>";
         return;
       }
       index = Math.max(0, Math.min(index, items.length - 1));
@@ -815,11 +810,8 @@
 
     function init() {
       const ids = Object.keys(DATA).sort();
-      annotatorSelect.innerHTML = ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
       const params = new URLSearchParams(location.search);
-      annotator = params.get("annotator") || ids[0] || "";
-      if (!DATA[annotator]) annotator = ids[0] || "";
-      annotatorSelect.value = annotator;
+      annotator = params.get("annotator") || "";
       loadResponses();
       const requestedItem = params.get("item");
       if (requestedItem) {
@@ -828,13 +820,6 @@
       }
       renderItem();
       renderSide();
-      annotatorSelect.addEventListener("change", () => {
-        annotator = annotatorSelect.value;
-        index = 0;
-        loadResponses();
-        renderItem();
-        renderSide();
-      });
       document.getElementById("clearLocal").addEventListener("click", () => {
         if (confirm(`Clear local draft for ${annotator}?`)) {
           localStorage.removeItem(storageKey());
