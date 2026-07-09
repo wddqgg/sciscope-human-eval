@@ -14,6 +14,7 @@
       --line: #d9dee7;
       --accent: #0f766e;
       --accent-soft: #d9f2ee;
+      --current: #111827;
       --warn: #9a3412;
     }
     * { box-sizing: border-box; }
@@ -37,7 +38,7 @@
       margin: 0 auto;
       padding: 12px 18px;
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto;
       gap: 12px;
       align-items: center;
     }
@@ -78,7 +79,7 @@
     }
     .layout {
       display: grid;
-      grid-template-columns: 236px 1fr;
+      grid-template-columns: 292px 1fr;
       gap: 16px;
       align-items: start;
     }
@@ -91,6 +92,8 @@
       position: sticky;
       top: 72px;
       padding: 12px;
+      max-height: calc(100vh - 92px);
+      overflow: auto;
     }
     .progress {
       height: 10px;
@@ -106,8 +109,6 @@
     }
     .list {
       margin-top: 10px;
-      max-height: 210px;
-      overflow: auto;
     }
     .nav-section {
       margin-top: 10px;
@@ -122,11 +123,11 @@
     }
     .nav-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 6px;
     }
     .pill {
-      min-height: 30px;
+      min-height: 34px;
       padding: 4px 0;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -138,18 +139,19 @@
     .pill.done {
       background: var(--accent-soft);
       border-color: #8dd8cb;
+      color: #064e45;
     }
     .pill.node {
-      background: #fff7ed;
-      border-color: #fed7aa;
+      background: #fff;
+      border-color: var(--line);
     }
     .pill.node.done {
-      background: #ffedd5;
-      border-color: #fb923c;
+      background: #d9f2ee;
+      border-color: #8dd8cb;
     }
     .pill.current {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
+      border-color: var(--current);
+      box-shadow: 0 0 0 2px var(--current);
     }
     .item {
       padding: 16px 18px;
@@ -293,6 +295,25 @@
       justify-content: space-between;
       margin-top: 18px;
     }
+    .message {
+      display: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    .message.error {
+      display: block;
+      border: 1px solid #fdba74;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+    .message.success {
+      display: block;
+      border: 1px solid #86efac;
+      background: #f0fdf4;
+      color: #166534;
+    }
     .rubric {
       margin-top: 16px;
       padding: 14px;
@@ -343,7 +364,7 @@
       .score-row { grid-template-columns: 1fr; }
       .item { padding: 14px; }
       h2 { font-size: 20px; }
-      .list { max-height: 150px; }
+      .side { max-height: none; }
       .dimension-table { font-size: 12px; }
     }
   </style>
@@ -353,7 +374,6 @@
     <div class="bar">
       <h1>SciScope Human Evaluation</h1>
       <select id="annotatorSelect" aria-label="Annotator"></select>
-      <button class="primary" id="exportJson">Export JSON</button>
     </div>
   </header>
   <main>
@@ -361,7 +381,6 @@
       <aside class="side">
         <div class="status" id="summary">Select annotator</div>
         <div class="progress"><div id="progressBar"></div></div>
-        <button id="exportCsv">Export CSV</button>
         <button id="clearLocal">Clear Local Draft</button>
         <div class="list" id="itemList"></div>
         <details class="rubric">
@@ -391,6 +410,7 @@
     let annotator = "";
     let index = 0;
     let responses = {};
+    let message = { type: "", text: "" };
 
     const paperCoreDims = [
       ["path_relevance", "Path relevance", "Does this paper belong to the assigned topic path?"],
@@ -428,6 +448,15 @@
     function saveResponses() {
       localStorage.setItem(storageKey(), JSON.stringify(responses));
       renderSide();
+    }
+
+    function setMessage(type, text) {
+      message = { type, text };
+      const box = document.getElementById("formMessage");
+      if (box) {
+        box.className = `message ${type || ""}`;
+        box.textContent = text || "";
+      }
     }
 
     function getItems() {
@@ -571,16 +600,19 @@
         <div class="actions">
           <button id="prevItem" ${index === 0 ? "disabled" : ""}>Previous</button>
           <div>
-            <button id="saveItem" class="primary">Save</button>
-            <button id="nextItem" ${index === items.length - 1 ? "disabled" : ""}>Next</button>
+            ${index === items.length - 1
+              ? `<button id="submitAll" class="primary">Submit</button>`
+              : `<button id="nextItem" class="primary">Next</button>`}
           </div>
         </div>
+        <div id="formMessage" class="message ${escapeHtml(message.type)}">${escapeHtml(message.text)}</div>
       `;
       itemView.querySelectorAll("input[type='radio']").forEach(input => {
         input.addEventListener("change", () => {
           const key = input.name.split("-").slice(1).join("-");
           responses[item.item_id][key] = Number(input.value);
           ensureResponseMeta(item);
+          message = { type: "", text: "" };
           saveResponses();
           renderItem();
         });
@@ -590,20 +622,25 @@
         ensureResponseMeta(item);
         saveResponses();
       });
-      document.getElementById("saveItem").addEventListener("click", () => {
-        ensureResponseMeta(item);
-        saveResponses();
-      });
       document.getElementById("prevItem").addEventListener("click", () => {
+        message = { type: "", text: "" };
         index -= 1;
         renderItem();
         renderSide();
       });
-      document.getElementById("nextItem").addEventListener("click", () => {
-        index += 1;
-        renderItem();
-        renderSide();
-      });
+      const nextButton = document.getElementById("nextItem");
+      if (nextButton) {
+        nextButton.addEventListener("click", () => {
+          message = { type: "", text: "" };
+          index += 1;
+          renderItem();
+          renderSide();
+        });
+      }
+      const submitButton = document.getElementById("submitAll");
+      if (submitButton) {
+        submitButton.addEventListener("click", submitAll);
+      }
     }
 
     function renderSide() {
@@ -691,6 +728,31 @@
       download(`${annotator}_sciscope_eval.csv`, csv, "text/csv");
     }
 
+    function incompleteItems() {
+      return getItems().filter(item => !isDone(item));
+    }
+
+    function submitAll() {
+      const missing = incompleteItems();
+      if (missing.length > 0) {
+        const firstMissing = missing[0];
+        index = getItems().findIndex(item => item.item_id === firstMissing.item_id);
+        message = {
+          type: "error",
+          text: `Please complete all items before submitting. Missing ${missing.length}: ${missing.map(item => item.item_id).join(", ")}`
+        };
+        renderItem();
+        renderSide();
+        return;
+      }
+      message = {
+        type: "success",
+        text: "All items are complete. Your result file is downloading now."
+      };
+      renderItem();
+      exportJson();
+    }
+
     function init() {
       const ids = Object.keys(DATA).sort();
       annotatorSelect.innerHTML = ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
@@ -713,8 +775,6 @@
         renderItem();
         renderSide();
       });
-      document.getElementById("exportJson").addEventListener("click", exportJson);
-      document.getElementById("exportCsv").addEventListener("click", exportCsv);
       document.getElementById("clearLocal").addEventListener("click", () => {
         if (confirm(`Clear local draft for ${annotator}?`)) {
           localStorage.removeItem(storageKey());
