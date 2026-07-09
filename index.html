@@ -77,6 +77,10 @@
       opacity: 0.45;
       cursor: not-allowed;
     }
+    body.locked .item,
+    body.locked .side {
+      border-color: #cbd5e1;
+    }
     .layout {
       display: grid;
       grid-template-columns: 292px 1fr;
@@ -270,6 +274,10 @@
       cursor: pointer;
       font-weight: 650;
     }
+    .scale label.disabled {
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
     .scale input {
       position: absolute;
       opacity: 0;
@@ -356,6 +364,20 @@
       color: var(--warn);
       font-weight: 650;
     }
+    .lock-note {
+      display: none;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .lock-note.visible {
+      display: block;
+    }
     @media (max-width: 820px) {
       .bar { grid-template-columns: 1fr; }
       .layout { grid-template-columns: 1fr; }
@@ -381,6 +403,7 @@
       <aside class="side">
         <div class="status" id="summary">Select annotator</div>
         <div class="progress"><div id="progressBar"></div></div>
+        <div class="lock-note" id="lockNote"></div>
         <button id="clearLocal">Clear Local Draft</button>
         <div class="list" id="itemList"></div>
         <details class="rubric">
@@ -407,6 +430,7 @@
     const itemList = document.getElementById("itemList");
     const summary = document.getElementById("summary");
     const progressBar = document.getElementById("progressBar");
+    const lockNote = document.getElementById("lockNote");
     let annotator = "";
     let index = 0;
     let responses = {};
@@ -443,10 +467,12 @@
       } catch {
         responses = {};
       }
+      document.body.classList.toggle("locked", isSubmitted());
     }
 
     function saveResponses() {
       localStorage.setItem(storageKey(), JSON.stringify(responses));
+      document.body.classList.toggle("locked", isSubmitted());
       renderSide();
     }
 
@@ -461,6 +487,14 @@
 
     function getItems() {
       return DATA[annotator] || [];
+    }
+
+    function isSubmitted() {
+      return responses.__submission?.submitted === true;
+    }
+
+    function submittedAt() {
+      return responses.__submission?.submitted_at || "";
     }
 
     function coreDimsFor(itemType) {
@@ -484,6 +518,7 @@
     }
 
     function ensureResponseMeta(item) {
+      if (isSubmitted()) return;
       responses[item.item_id] = responses[item.item_id] || {};
       responses[item.item_id].item_id = item.item_id;
       responses[item.item_id].item_type = item.item_type;
@@ -527,8 +562,8 @@
       const dims = dimsFor(item.item_type);
       const question = (dims.find(([dimKey]) => dimKey === key) || [null, null, ""])[2];
       const radios = [1, 2, 3, 4, 5].map(value => `
-        <label>
-          <input type="radio" name="${item.item_id}-${key}" value="${value}" ${String(current) === String(value) ? "checked" : ""}>
+        <label class="${isSubmitted() ? "disabled" : ""}" data-score-key="${key}" data-score-value="${value}">
+          <input type="radio" name="${item.item_id}-${key}" value="${value}" ${String(current) === String(value) ? "checked" : ""} ${isSubmitted() ? "disabled" : ""}>
           ${value}
         </label>
       `).join("");
@@ -557,7 +592,7 @@
       index = Math.max(0, Math.min(index, items.length - 1));
       const item = items[index];
       const response = responses[item.item_id] || {};
-      ensureResponseMeta(item);
+      if (!isSubmitted()) ensureResponseMeta(item);
       const dims = dimsFor(item.item_type);
       const typeLabel = item.item_type === "paper_path" ? "Paper-path" : "Evolution node";
       const taskNote = item.item_type === "paper_path"
@@ -594,23 +629,33 @@
           ${dims.map(([key, label]) => scoreControl(item, key, label)).join("")}
           <div>
             <h3>Optional comment</h3>
-            <textarea id="commentBox">${escapeHtml(response.optional_comment || "")}</textarea>
+            <textarea id="commentBox" ${isSubmitted() ? "disabled" : ""}>${escapeHtml(response.optional_comment || "")}</textarea>
           </div>
         </div>
         <div class="actions">
           <button id="prevItem" ${index === 0 ? "disabled" : ""}>Previous</button>
           <div>
             ${index === items.length - 1
-              ? `<button id="submitAll" class="primary">Submit</button>`
+              ? (isSubmitted()
+                ? `<button id="downloadSubmission" class="primary">Download submission</button>`
+                : `<button id="submitAll" class="primary">Submit</button>`)
               : `<button id="nextItem" class="primary">Next</button>`}
           </div>
         </div>
         <div id="formMessage" class="message ${escapeHtml(message.type)}">${escapeHtml(message.text)}</div>
       `;
-      itemView.querySelectorAll("input[type='radio']").forEach(input => {
-        input.addEventListener("change", () => {
-          const key = input.name.split("-").slice(1).join("-");
-          responses[item.item_id][key] = Number(input.value);
+      itemView.querySelectorAll(".scale label").forEach(label => {
+        label.addEventListener("click", event => {
+          event.preventDefault();
+          if (isSubmitted()) return;
+          const key = label.dataset.scoreKey;
+          const value = Number(label.dataset.scoreValue);
+          responses[item.item_id] = responses[item.item_id] || {};
+          if (Number(responses[item.item_id][key]) === value) {
+            delete responses[item.item_id][key];
+          } else {
+            responses[item.item_id][key] = value;
+          }
           ensureResponseMeta(item);
           message = { type: "", text: "" };
           saveResponses();
@@ -618,6 +663,7 @@
         });
       });
       document.getElementById("commentBox").addEventListener("input", event => {
+        if (isSubmitted()) return;
         responses[item.item_id].optional_comment = event.target.value;
         ensureResponseMeta(item);
         saveResponses();
@@ -641,6 +687,10 @@
       if (submitButton) {
         submitButton.addEventListener("click", submitAll);
       }
+      const downloadButton = document.getElementById("downloadSubmission");
+      if (downloadButton) {
+        downloadButton.addEventListener("click", exportJson);
+      }
     }
 
     function renderSide() {
@@ -648,8 +698,11 @@
       const done = items.filter(isDone).length;
       const paperItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "paper_path");
       const nodeItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "evolution_node");
-      summary.textContent = annotator ? `${annotator}: ${done}/${items.length} completed` : "Select annotator";
+      summary.textContent = annotator ? `${annotator}: ${done}/${items.length} completed${isSubmitted() ? " · submitted" : ""}` : "Select annotator";
       progressBar.style.width = items.length ? `${Math.round(done * 100 / items.length)}%` : "0";
+      lockNote.textContent = isSubmitted() ? `Submitted at ${submittedAt()}. Responses are locked.` : "";
+      lockNote.classList.toggle("visible", isSubmitted());
+      document.getElementById("clearLocal").disabled = isSubmitted();
       function group(title, pairs) {
         return `
           <div class="nav-section">
@@ -705,6 +758,8 @@
       const payload = {
         annotator_id: annotator,
         exported_at: new Date().toISOString(),
+        submitted: isSubmitted(),
+        submitted_at: submittedAt(),
         responses: responseRows()
       };
       download(`${annotator}_sciscope_eval.json`, JSON.stringify(payload, null, 2), "application/json");
@@ -745,9 +800,14 @@
         renderSide();
         return;
       }
+      responses.__submission = {
+        submitted: true,
+        submitted_at: new Date().toISOString()
+      };
+      saveResponses();
       message = {
         type: "success",
-        text: "All items are complete. Your result file is downloading now."
+        text: "Submission complete. Your responses are now locked, and the result file is downloading."
       };
       renderItem();
       exportJson();
