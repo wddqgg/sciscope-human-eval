@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SciScope Human Evaluation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #19202a;
+      --muted: #667085;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-soft: #d9f2ee;
+      --warn: #9a3412;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(246, 247, 249, 0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+    .bar {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 12px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    select, button, textarea {
+      font: inherit;
+    }
+    select, button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+    button {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 236px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .side, .item, .rubric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .side {
+      position: sticky;
+      top: 72px;
+      padding: 12px;
+    }
+    .progress {
+      height: 10px;
+      background: #e7ebf1;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 10px 0 12px;
+    }
+    .progress > div {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+    }
+    .list {
+      margin-top: 10px;
+      max-height: 210px;
+      overflow: auto;
+    }
+    .nav-section {
+      margin-top: 10px;
+    }
+    .nav-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 12px 0 6px;
+    }
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .pill {
+      min-height: 30px;
+      padding: 4px 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill.done {
+      background: var(--accent-soft);
+      border-color: #8dd8cb;
+    }
+    .pill.node {
+      background: #fff7ed;
+      border-color: #fed7aa;
+    }
+    .pill.node.done {
+      background: #ffedd5;
+      border-color: #fb923c;
+    }
+    .pill.current {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .item {
+      padding: 16px 18px;
+    }
+    .tagrow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 21px;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    .field {
+      border-top: 1px solid var(--line);
+      padding: 8px 0;
+    }
+    .task-note {
+      border: 1px solid #b7d7d1;
+      background: #f0fdfa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0 12px;
+      color: #134e4a;
+      font-size: 14px;
+    }
+    .dimension-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px;
+      font-size: 13px;
+    }
+    .dimension-table th {
+      text-align: left;
+      color: #344054;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-bottom: 1px solid var(--line);
+      padding: 6px 4px;
+    }
+    .dimension-table td {
+      border-bottom: 1px solid #edf0f4;
+      padding: 7px 4px;
+      vertical-align: top;
+    }
+    .dimension-table td:first-child {
+      font-weight: 700;
+      width: 25%;
+    }
+    .dimension-table td:last-child {
+      width: 58px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+    .value {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .scores {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+    .score-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 270px) 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .score-name {
+      font-weight: 800;
+    }
+    .score-question {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .scale {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(42px, 1fr));
+      gap: 6px;
+    }
+    .scale label {
+      min-height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    .scale input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .scale label:has(input:checked) {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #064e45;
+    }
+    textarea {
+      width: 100%;
+      min-height: 76px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      resize: vertical;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+    .rubric {
+      margin-top: 16px;
+      padding: 14px;
+      color: #344054;
+      font-size: 13px;
+    }
+    details.field {
+      cursor: pointer;
+    }
+    details.field summary {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+    details.rubric {
+      padding: 10px 12px;
+    }
+    details.rubric summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .rubric table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .rubric td {
+      border-top: 1px solid var(--line);
+      padding: 6px 4px;
+      vertical-align: top;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .warn {
+      color: var(--warn);
+      font-weight: 650;
+    }
+    @media (max-width: 820px) {
+      .bar { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; }
+      .side { position: static; order: 2; }
+      section { order: 1; }
+      .score-row { grid-template-columns: 1fr; }
+      .item { padding: 14px; }
+      h2 { font-size: 20px; }
+      .list { max-height: 150px; }
+      .dimension-table { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <h1>SciScope Human Evaluation</h1>
+      <select id="annotatorSelect" aria-label="Annotator"></select>
+      <button class="primary" id="exportJson">Export JSON</button>
+    </div>
+  </header>
+  <main>
+    <div class="layout">
+      <aside class="side">
+        <div class="status" id="summary">Select annotator</div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <button id="exportCsv">Export CSV</button>
+        <button id="clearLocal">Clear Local Draft</button>
+        <div class="list" id="itemList"></div>
+        <details class="rubric">
+          <summary>Score rubric</summary>
+          <table>
+            <tr><td>1</td><td>Clearly wrong or unsupported</td></tr>
+            <tr><td>2</td><td>Weak / mostly incorrect</td></tr>
+            <tr><td>3</td><td>Partially correct but ambiguous</td></tr>
+            <tr><td>4</td><td>Good with minor uncertainty</td></tr>
+            <tr><td>5</td><td>Clearly correct and well supported</td></tr>
+          </table>
+        </details>
+      </aside>
+      <section>
+        <article class="item" id="itemView"></article>
+      </section>
+    </div>
+  </main>
+  <script src="data.js"></script>
+  <script>
+    const DATA = window.SCISCOPE_EVAL_DATA || {};
+    const annotatorSelect = document.getElementById("annotatorSelect");
+    const itemView = document.getElementById("itemView");
+    const itemList = document.getElementById("itemList");
+    const summary = document.getElementById("summary");
+    const progressBar = document.getElementById("progressBar");
+    let annotator = "";
+    let index = 0;
+    let responses = {};
+
+    const paperCoreDims = [
+      ["path_relevance", "Path relevance", "Does this paper belong to the assigned topic path?"],
+      ["path_specificity", "Path specificity", "Is the path specific enough, rather than too broad or too narrow?"],
+      ["sibling_distinction", "Sibling distinction", "Compared with sibling topics, is this assignment reasonable?"],
+      ["paper_evidence_support", "Paper evidence support", "Do the paper title and topic text support this assignment?"]
+    ];
+    const nodeCoreDims = [
+      ["branch_coherence", "Branch coherence", "Does this node represent a coherent research branch?"],
+      ["trend_label_support", "Trend-label support", "Does the trend support the lifecycle label?"],
+      ["evolution_interpretability", "Evolution interpretability", "Does this node help explain how the direction evolves?"],
+      ["paper_traceability", "Paper traceability", "Are the representative papers sufficient to inspect the claim?"]
+    ];
+    const paperDims = [
+      ...paperCoreDims,
+      ["confidence", "Confidence", "How confident are you in your ratings?"]
+    ];
+    const nodeDims = [
+      ...nodeCoreDims,
+      ["confidence", "Confidence", "How confident are you in your ratings?"]
+    ];
+
+    function storageKey() {
+      return `sciscope-human-eval-${annotator}`;
+    }
+
+    function loadResponses() {
+      try {
+        responses = JSON.parse(localStorage.getItem(storageKey()) || "{}");
+      } catch {
+        responses = {};
+      }
+    }
+
+    function saveResponses() {
+      localStorage.setItem(storageKey(), JSON.stringify(responses));
+      renderSide();
+    }
+
+    function getItems() {
+      return DATA[annotator] || [];
+    }
+
+    function coreDimsFor(itemType) {
+      return itemType === "paper_path" ? paperCoreDims : nodeCoreDims;
+    }
+
+    function dimsFor(itemType) {
+      return itemType === "paper_path" ? paperDims : nodeDims;
+    }
+
+    function computeOverall(item, response = responses[item.item_id] || {}) {
+      const values = coreDimsFor(item.item_type).map(([key]) => Number(response[key]));
+      if (values.some(value => !Number.isFinite(value) || value < 1 || value > 5)) {
+        return { overall: "", overall_sum: "" };
+      }
+      const overall_sum = values.reduce((sum, value) => sum + value, 0);
+      return {
+        overall: Number((overall_sum / values.length).toFixed(2)),
+        overall_sum
+      };
+    }
+
+    function ensureResponseMeta(item) {
+      responses[item.item_id] = responses[item.item_id] || {};
+      responses[item.item_id].item_id = item.item_id;
+      responses[item.item_id].item_type = item.item_type;
+      responses[item.item_id].annotator_id = annotator;
+      const computed = computeOverall(item, responses[item.item_id]);
+      if (computed.overall !== "") {
+        responses[item.item_id].overall = computed.overall;
+        responses[item.item_id].overall_sum = computed.overall_sum;
+      } else {
+        delete responses[item.item_id].overall;
+        delete responses[item.item_id].overall_sum;
+      }
+    }
+
+    function isDone(item) {
+      const response = responses[item.item_id] || {};
+      const required = [...coreDimsFor(item.item_type).map(([key]) => key), "confidence"];
+      return required.every(key => Number(response[key]) >= 1 && Number(response[key]) <= 5);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function field(label, value) {
+      if (!value) return "";
+      return `<div class="field"><div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(value)}</div></div>`;
+    }
+
+    function foldedField(label, value, open = false) {
+      if (!value) return "";
+      return `<details class="field" ${open ? "open" : ""}><summary>${escapeHtml(label)}</summary><div class="value">${escapeHtml(value)}</div></details>`;
+    }
+
+    function scoreControl(item, key, label) {
+      const current = responses[item.item_id]?.[key] || "";
+      const dims = dimsFor(item.item_type);
+      const question = (dims.find(([dimKey]) => dimKey === key) || [null, null, ""])[2];
+      const radios = [1, 2, 3, 4, 5].map(value => `
+        <label>
+          <input type="radio" name="${item.item_id}-${key}" value="${value}" ${String(current) === String(value) ? "checked" : ""}>
+          ${value}
+        </label>
+      `).join("");
+      return `<div class="score-row"><div><div class="score-name">${escapeHtml(label)}</div><div class="score-question">${escapeHtml(question)}</div></div><div class="scale" data-key="${key}">${radios}</div></div>`;
+    }
+
+    function dimensionTable(itemType) {
+      const dims = dimsFor(itemType);
+      const rows = dims.filter(([key]) => key !== "confidence").map(([, label, question]) => `
+        <tr><td>${escapeHtml(label)}</td><td>${escapeHtml(question)}</td><td>1--5</td></tr>
+      `).join("");
+      return `
+        <table class="dimension-table">
+          <thead><tr><th>Dimension</th><th>Question</th><th>Scale</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function renderItem() {
+      const items = getItems();
+      if (!items.length) {
+        itemView.innerHTML = "<h2>No items</h2><p class='warn'>Please select an annotator.</p>";
+        return;
+      }
+      index = Math.max(0, Math.min(index, items.length - 1));
+      const item = items[index];
+      const response = responses[item.item_id] || {};
+      ensureResponseMeta(item);
+      const dims = dimsFor(item.item_type);
+      const typeLabel = item.item_type === "paper_path" ? "Paper-path" : "Evolution node";
+      const taskNote = item.item_type === "paper_path"
+        ? "Task: judge whether this paper is assigned to an appropriate topic path. Use the paper title/topic text, assigned path, node definition, and sibling topics."
+        : "Task: judge whether this topic node supports research-evolution understanding. Use the node definition, trend/lifecycle label, children/siblings, and representative papers.";
+      const title = item.item_type === "paper_path" ? item.paper_title : item.node_label;
+      const content = item.item_type === "paper_path" ? `
+        ${field("Topic text", item.topic_text)}
+        ${field("Assigned topic path", item.assigned_topic_path)}
+        ${field("Node definition", item.node_definition)}
+        ${foldedField("Sibling topics", item.sibling_topics)}
+      ` : `
+        ${field("Node path", item.node_path)}
+        ${field("Node definition", item.node_definition)}
+        ${field("Lifecycle label", item.lifecycle_label)}
+        ${field("Trend summary", item.trend_summary)}
+        ${foldedField("Child topics", item.child_topics)}
+        ${foldedField("Sibling topics", item.sibling_topics)}
+        ${foldedField("Representative papers", item.representative_papers, true)}
+      `;
+      itemView.innerHTML = `
+        <div class="tagrow">
+          <span class="tag">${escapeHtml(typeLabel)}</span>
+          <span class="tag">${escapeHtml(item.domain)}</span>
+          <span class="tag">${escapeHtml(item.item_id)}</span>
+          ${item.year ? `<span class="tag">${escapeHtml(item.year)}</span>` : ""}
+          ${item.category ? `<span class="tag">${escapeHtml(item.category)}</span>` : ""}
+        </div>
+        <h2>${escapeHtml(title)}</h2>
+        <div class="task-note">${escapeHtml(taskNote)}</div>
+        ${dimensionTable(item.item_type)}
+        ${content}
+        <div class="scores">
+          ${dims.map(([key, label]) => scoreControl(item, key, label)).join("")}
+          <div>
+            <h3>Optional comment</h3>
+            <textarea id="commentBox">${escapeHtml(response.optional_comment || "")}</textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="prevItem" ${index === 0 ? "disabled" : ""}>Previous</button>
+          <div>
+            <button id="saveItem" class="primary">Save</button>
+            <button id="nextItem" ${index === items.length - 1 ? "disabled" : ""}>Next</button>
+          </div>
+        </div>
+      `;
+      itemView.querySelectorAll("input[type='radio']").forEach(input => {
+        input.addEventListener("change", () => {
+          const key = input.name.split("-").slice(1).join("-");
+          responses[item.item_id][key] = Number(input.value);
+          ensureResponseMeta(item);
+          saveResponses();
+          renderItem();
+        });
+      });
+      document.getElementById("commentBox").addEventListener("input", event => {
+        responses[item.item_id].optional_comment = event.target.value;
+        ensureResponseMeta(item);
+        saveResponses();
+      });
+      document.getElementById("saveItem").addEventListener("click", () => {
+        ensureResponseMeta(item);
+        saveResponses();
+      });
+      document.getElementById("prevItem").addEventListener("click", () => {
+        index -= 1;
+        renderItem();
+        renderSide();
+      });
+      document.getElementById("nextItem").addEventListener("click", () => {
+        index += 1;
+        renderItem();
+        renderSide();
+      });
+    }
+
+    function renderSide() {
+      const items = getItems();
+      const done = items.filter(isDone).length;
+      const paperItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "paper_path");
+      const nodeItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "evolution_node");
+      summary.textContent = annotator ? `${annotator}: ${done}/${items.length} completed` : "Select annotator";
+      progressBar.style.width = items.length ? `${Math.round(done * 100 / items.length)}%` : "0";
+      function group(title, pairs) {
+        return `
+          <div class="nav-section">
+            <div class="nav-title">${escapeHtml(title)}</div>
+            <div class="nav-grid">
+              ${pairs.map(([item, idx]) => `
+                <button class="pill ${item.item_type === "evolution_node" ? "node" : ""} ${isDone(item) ? "done" : ""} ${idx === index ? "current" : ""}" data-index="${idx}">
+                  ${escapeHtml(item.item_id)}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+      itemList.innerHTML = group(`Paper-path (${paperItems.length})`, paperItems) + group(`Evolution-node (${nodeItems.length})`, nodeItems);
+      itemList.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+          index = Number(button.dataset.index);
+          renderItem();
+          renderSide();
+        });
+      });
+    }
+
+    function responseRows() {
+      return getItems().map(item => {
+        const response = responses[item.item_id] || {};
+        const computed = computeOverall(item, response);
+        return {
+          annotator_id: annotator,
+          item_id: item.item_id,
+          item_type: item.item_type,
+          domain: item.domain,
+          ...response,
+          overall: computed.overall,
+          overall_sum: computed.overall_sum,
+          is_complete: isDone(item)
+        };
+      });
+    }
+
+    function download(name, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson() {
+      const payload = {
+        annotator_id: annotator,
+        exported_at: new Date().toISOString(),
+        responses: responseRows()
+      };
+      download(`${annotator}_sciscope_eval.json`, JSON.stringify(payload, null, 2), "application/json");
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      if (/[",\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+      return text;
+    }
+
+    function exportCsv() {
+      const rows = responseRows();
+      const keys = [
+        "annotator_id", "item_id", "item_type", "domain",
+        "path_relevance", "path_specificity", "sibling_distinction", "paper_evidence_support",
+        "branch_coherence", "trend_label_support", "evolution_interpretability", "paper_traceability",
+        "overall", "overall_sum", "confidence", "is_complete", "optional_comment"
+      ];
+      const csv = [keys.join(",")].concat(rows.map(row => keys.map(key => csvEscape(row[key])).join(","))).join("\n");
+      download(`${annotator}_sciscope_eval.csv`, csv, "text/csv");
+    }
+
+    function init() {
+      const ids = Object.keys(DATA).sort();
+      annotatorSelect.innerHTML = ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join("");
+      const params = new URLSearchParams(location.search);
+      annotator = params.get("annotator") || ids[0] || "";
+      if (!DATA[annotator]) annotator = ids[0] || "";
+      annotatorSelect.value = annotator;
+      loadResponses();
+      const requestedItem = params.get("item");
+      if (requestedItem) {
+        const requestedIndex = getItems().findIndex(item => item.item_id === requestedItem);
+        if (requestedIndex >= 0) index = requestedIndex;
+      }
+      renderItem();
+      renderSide();
+      annotatorSelect.addEventListener("change", () => {
+        annotator = annotatorSelect.value;
+        index = 0;
+        loadResponses();
+        renderItem();
+        renderSide();
+      });
+      document.getElementById("exportJson").addEventListener("click", exportJson);
+      document.getElementById("exportCsv").addEventListener("click", exportCsv);
+      document.getElementById("clearLocal").addEventListener("click", () => {
+        if (confirm(`Clear local draft for ${annotator}?`)) {
+          localStorage.removeItem(storageKey());
+          responses = {};
+          renderItem();
+          renderSide();
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
