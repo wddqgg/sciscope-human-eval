@@ -397,7 +397,7 @@
   <main>
     <div class="layout">
       <aside class="side">
-        <div class="status" id="summary">Select annotator</div>
+        <div class="status" id="summary">Personal link required</div>
         <div class="progress"><div id="progressBar"></div></div>
         <div class="lock-note" id="lockNote"></div>
         <button id="clearLocal">Clear Local Draft</button>
@@ -441,7 +441,7 @@
       ["branch_coherence", "Branch coherence", "Does this node represent a coherent research branch?"],
       ["trend_label_support", "Trend-label support", "Does the trend support the lifecycle label?"],
       ["evolution_interpretability", "Evolution interpretability", "Does this node help explain how the direction evolves?"],
-      ["paper_traceability", "Paper traceability", "Are the representative papers sufficient to inspect the claim?"]
+      ["paper_traceability", "Paper traceability", "Do the evidence papers across years support inspecting the node and lifecycle trend?"]
     ];
     const paperDims = [
       ...paperCoreDims,
@@ -592,7 +592,7 @@
       const typeLabel = item.item_type === "paper_path" ? "Paper-path" : "Evolution node";
       const taskNote = item.item_type === "paper_path"
         ? "Task: judge whether this paper is assigned to an appropriate topic path. Use the paper title/topic text, assigned path, node definition, and sibling topics."
-        : "Task: judge whether this topic node supports research-evolution understanding. Use the node definition, trend/lifecycle label, children/siblings, and representative papers.";
+        : "Task: judge whether this topic node supports research-evolution understanding. Use the node definition, trend/lifecycle label, children/siblings, and evidence papers across years.";
       const title = item.item_type === "paper_path" ? item.paper_title : item.node_label;
       const content = item.item_type === "paper_path" ? `
         ${field("Topic text", item.topic_text)}
@@ -604,9 +604,10 @@
         ${field("Node definition", item.node_definition)}
         ${field("Lifecycle label", item.lifecycle_label)}
         ${field("Trend summary", item.trend_summary)}
+        ${field("Evidence years", item.temporal_evidence_years)}
         ${foldedField("Child topics", item.child_topics)}
         ${foldedField("Sibling topics", item.sibling_topics)}
-        ${foldedField("Representative papers", item.representative_papers, true)}
+        ${foldedField("Evidence papers across years", item.temporal_evidence_papers, true)}
       `;
       itemView.innerHTML = `
         <div class="tagrow">
@@ -693,7 +694,7 @@
       const done = items.filter(isDone).length;
       const paperItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "paper_path");
       const nodeItems = items.map((item, idx) => [item, idx]).filter(([item]) => item.item_type === "evolution_node");
-      summary.textContent = annotator ? `${annotator}: ${done}/${items.length} completed${isSubmitted() ? " · submitted" : ""}` : "Select annotator";
+      summary.textContent = annotator ? `${annotator}: ${done}/${items.length} completed${isSubmitted() ? " · submitted" : ""}` : "Personal link required";
       progressBar.style.width = items.length ? `${Math.round(done * 100 / items.length)}%` : "0";
       lockNote.textContent = isSubmitted() ? `Submitted at ${submittedAt()}. Responses are locked.` : "";
       lockNote.classList.toggle("visible", isSubmitted());
